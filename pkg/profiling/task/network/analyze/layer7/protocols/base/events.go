@@ -33,6 +33,13 @@ type SocketDataBuffer interface {
 	// Direction of the data, send or receive
 	Direction() base.SocketDataDirection
 	FirstEvent() *SocketDataUploadEvent
+	BufferStartPosition() int
+	BufferLen() int
+	DataID() uint64
+	DataSequence() int
+	IsStart() bool
+	IsFinished() bool
+	MessageType() base.SocketMessageType
 
 	StartTime() uint64
 	EndTime() uint64
@@ -46,13 +53,13 @@ type SocketDataUploadEvent struct {
 	MsgType      base.SocketMessageType
 	Direction0   base.SocketDataDirection
 	Finished     uint8
-	Sequence     uint16
+	Sequence0    uint16
 	DataLen      uint16
 	StartTime0   uint64
 	EndTime0     uint64
 	ConnectionID uint64
 	RandomID     uint64
-	DataID       uint64
+	DataID0      uint64
 	TotalSize0   uint64
 	Buffer       [2048]byte
 }
@@ -63,6 +70,10 @@ func (s *SocketDataUploadEvent) GenerateConnectionID() string {
 
 func (s *SocketDataUploadEvent) BufferData() []byte {
 	return s.Buffer[:s.DataLen]
+}
+
+func (s *SocketDataUploadEvent) BufferLen() int {
+	return int(s.DataLen)
 }
 
 func (s *SocketDataUploadEvent) StartTime() uint64 {
@@ -82,29 +93,45 @@ func (s *SocketDataUploadEvent) FirstEvent() *SocketDataUploadEvent {
 }
 
 func (s *SocketDataUploadEvent) MinDataID() int {
-	return int(s.DataID)
+	return int(s.DataID0)
 }
 
 func (s *SocketDataUploadEvent) MaxDataID() int {
-	return int(s.DataID)
+	return int(s.DataID0)
 }
 
 func (s *SocketDataUploadEvent) IsStart() bool {
-	return s.Sequence == 0
+	return s.Sequence0 == 0
 }
 
 func (s *SocketDataUploadEvent) IsFinished() bool {
 	return s.Finished == 1
 }
 
+func (s *SocketDataUploadEvent) DataID() uint64 {
+	return s.DataID0
+}
+
+func (s *SocketDataUploadEvent) DataSequence() int {
+	return int(s.Sequence0)
+}
+
+func (s *SocketDataUploadEvent) MessageType() base.SocketMessageType {
+	return s.MsgType
+}
+
+func (s *SocketDataUploadEvent) BufferStartPosition() int {
+	return 0
+}
+
 func (s *SocketDataUploadEvent) Combine(other SocketDataBuffer) SocketDataBuffer {
 	combined := &SocketDataUploadCombinedEvent{first: s}
 	combined.realBuffer = append(s.Buffer[:s.DataLen], other.BufferData()...)
-	combined.minDataID = int(s.DataID)
+	combined.minDataID = int(s.DataID())
 	if other.MinDataID() < combined.minDataID {
 		combined.minDataID = other.MinDataID()
 	}
-	combined.maxDataID = int(s.DataID)
+	combined.maxDataID = int(s.DataID())
 	if other.MaxDataID() > combined.maxDataID {
 		combined.maxDataID = other.MaxDataID()
 	}
@@ -113,6 +140,24 @@ func (s *SocketDataUploadEvent) Combine(other SocketDataBuffer) SocketDataBuffer
 
 func (s *SocketDataUploadEvent) TotalSize() uint64 {
 	return s.TotalSize0
+}
+
+type SocketDataEventLimited struct {
+	SocketDataBuffer
+	from int
+	size int
+}
+
+func (s *SocketDataEventLimited) BufferData() []byte {
+	return s.SocketDataBuffer.BufferData()[s.from:s.size]
+}
+
+func (s *SocketDataEventLimited) BufferLen() int {
+	return s.size - s.from
+}
+
+func (s *SocketDataEventLimited) BufferStartPosition() int {
+	return s.from
 }
 
 type SocketDataUploadCombinedEvent struct {
@@ -154,6 +199,10 @@ func (s *SocketDataUploadCombinedEvent) FirstEvent() *SocketDataUploadEvent {
 	return s.first
 }
 
+func (s *SocketDataUploadCombinedEvent) BufferLen() int {
+	return len(s.realBuffer)
+}
+
 func (s *SocketDataUploadCombinedEvent) Combine(other SocketDataBuffer) SocketDataBuffer {
 	s.realBuffer = append(s.realBuffer, other.BufferData()...)
 	if other.MinDataID() < s.minDataID {
@@ -163,4 +212,28 @@ func (s *SocketDataUploadCombinedEvent) Combine(other SocketDataBuffer) SocketDa
 		s.maxDataID = other.MaxDataID()
 	}
 	return s
+}
+
+func (s *SocketDataUploadCombinedEvent) IsStart() bool {
+	return s.first.Sequence0 == 0
+}
+
+func (s *SocketDataUploadCombinedEvent) IsFinished() bool {
+	return s.first.Finished == 1
+}
+
+func (s *SocketDataUploadCombinedEvent) DataID() uint64 {
+	return s.first.DataID0
+}
+
+func (s *SocketDataUploadCombinedEvent) DataSequence() int {
+	return int(s.first.Sequence0)
+}
+
+func (s *SocketDataUploadCombinedEvent) MessageType() base.SocketMessageType {
+	return s.first.MsgType
+}
+
+func (s *SocketDataUploadCombinedEvent) BufferStartPosition() int {
+	return 0
 }

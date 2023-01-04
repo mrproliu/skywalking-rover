@@ -46,7 +46,7 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 		val;                                                           \
 	})
 
-#define SOCKET_UPLOAD_CHUNK_LIMIT 8
+#define SOCKET_UPLOAD_CHUNK_LIMIT 12
 
 static __inline bool family_should_trace(const __u32 family) {
     return family != AF_UNKNOWN && family != AF_INET && family != AF_INET6 ? false : true;
@@ -364,17 +364,6 @@ static __inline void upload_socket_data(void *ctx, __u64 start_time, __u64 end_t
     // ssl must same, means only process the plain data
     if (connection->ssl != ssl) {
         return;
-    }
-    // if the msg type is unknown, then try to re-analysis
-    if (existing_msg_type == CONNECTION_MESSAGE_TYPE_UNKNOWN) {
-        struct socket_buffer_reader_t *buf_reader = read_socket_data(args, bytes_count);
-        if (buf_reader == NULL) {
-            return;
-        }
-        existing_msg_type = analyze_protocol(buf_reader->buffer, buf_reader->data_len, connection);
-        if (existing_msg_type == CONNECTION_MESSAGE_TYPE_UNKNOWN && args->ssl_buffer_force_unfinished == 0) {
-            return;
-        }
     }
 
     // basic data
