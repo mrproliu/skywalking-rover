@@ -70,9 +70,11 @@ func TestOffsetPosition(t *testing.T) {
 		buffer := Buffer{dataEvents: events}
 		var curElement *list.Element
 		for i, e := range test.events {
-			element := events.PushBack(&SocketDataUploadEvent{
-				DataID0: uint64(i),
-				DataLen: uint16(e),
+			element := events.PushBack(&SocketDataUploadEventReceiver{
+				SocketDataUploadEvent: &SocketDataUploadEvent{
+					DataID0: uint64(i),
+					DataLen: uint16(e),
+				},
 			})
 			if i == test.current.eventIndex {
 				curElement = element
@@ -85,10 +87,10 @@ func TestOffsetPosition(t *testing.T) {
 		if offsetPosition == nil && test.result == nil {
 			continue
 		}
-		if int(offsetPosition.element.Value.(*SocketDataUploadEvent).DataID()) != test.result.eventIndex ||
+		if int(offsetPosition.element.Value.(SocketDataBuffer).DataID()) != test.result.eventIndex ||
 			offsetPosition.bufIndex != test.result.bufferIndex {
 			t.Fatalf("excepted: %d,%d, actual: %d,%d", test.result.eventIndex, test.result.bufferIndex,
-				offsetPosition.element.Value.(*SocketDataUploadEvent).DataID(), offsetPosition.bufIndex)
+				offsetPosition.element.Value.(SocketDataBuffer).DataID(), offsetPosition.bufIndex)
 		}
 	}
 }
