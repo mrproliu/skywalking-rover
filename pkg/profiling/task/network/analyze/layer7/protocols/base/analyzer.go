@@ -105,7 +105,8 @@ func (a *ProtocolAnalyzer) ReceiveSocketData(ctx Context, event *SocketDataUploa
 		event.Direction().String(), event.DataLen, event.TotalSize0)
 
 	// insert to the event list
-	connection.buffer.appendDataEvent(event)
+	eventWrapper := &SocketDataUploadEventReceiver{SocketDataUploadEvent: event, ReceiveTime: time.Now()}
+	connection.buffer.appendDataEvent(eventWrapper)
 
 	// process the events if reach the receiver counter
 	a.receiveEventCount++

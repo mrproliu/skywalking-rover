@@ -24,12 +24,14 @@ struct socket_detail_t {
     __u64 random_id;
     __u64 data_id;
     __u64 total_package_size;
+    __u64 start_time;
+    __u64 end_time;
     __u32 ifindex;
     __u8 package_count;
     __u8 func_name;
     __u8 rtt_count;
     __u8 protocol;
-    __u64 rtt_time;
+    __u32 rtt_time;
 };
 
 struct {
@@ -42,7 +44,7 @@ struct {
 	__uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 } socket_detail_data_queue SEC(".maps");
 
-static __inline void upload_socket_detail(void *ctx, __u64 conid, struct active_connection_t *connection, __u8 func_name, struct sock_data_args_t *data_args, bool ssl) {
+static __inline void upload_socket_detail(void *ctx, __u64 start_time, __u64 end_time, __u64 conid, struct active_connection_t *connection, __u8 func_name, struct sock_data_args_t *data_args, bool ssl) {
     // only send the original socket syscall(not ssl) and the protocol must been set
     if (ssl == true || connection->protocol == CONNECTION_PROTOCOL_UNKNOWN) {
         return;
@@ -56,6 +58,8 @@ static __inline void upload_socket_detail(void *ctx, __u64 conid, struct active_
     detail->connection_id = conid;
     detail->random_id = connection->random_id;
     detail->data_id = data_args->data_id;
+    detail->start_time = start_time;
+    detail->end_time = end_time;
     detail->func_name = func_name;
     detail->total_package_size = data_args->total_package_size;
     detail->ifindex = data_args->ifindex;

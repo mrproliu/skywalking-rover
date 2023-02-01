@@ -307,8 +307,8 @@ func (h *Trace) appendPerDetailEvent(events []*v3.SpanAttachedEvent, process api
 	if dataBuffer == nil {
 		return events
 	}
-	event.StartTime = host.TimeToInstant(dataBuffer.StartTime())
-	event.EndTime = host.TimeToInstant(dataBuffer.EndTime())
+	event.StartTime = host.TimeToInstant(detail.StartTime)
+	event.EndTime = host.TimeToInstant(detail.EndTime)
 	event.Event = fmt.Sprintf("Syscall %s", detail.FuncName.String())
 	event.Tags = make([]*commonv3.KeyStringValuePair, 0)
 	event.Tags = append(event.Tags,

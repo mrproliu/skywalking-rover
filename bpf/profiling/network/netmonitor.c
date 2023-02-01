@@ -357,7 +357,7 @@ static __always_inline void upload_socket_data_iov(void *ctx, struct iovec* iov,
     UPLOAD_PER_SOCKET_DATA_IOV();
 }
 
-static __inline void upload_socket_data(void *ctx, __u64 start_time, __u64 end_time, __u64 conid, struct active_connection_t *connection, struct sock_data_args_t *args, ssize_t bytes_count, __u32 existing_msg_type, __u32 data_direction, bool ssl) {
+static __inline void upload_socket_data(void *ctx, __u64 conid, struct active_connection_t *connection, struct sock_data_args_t *args, ssize_t bytes_count, __u32 existing_msg_type, __u32 data_direction, bool ssl) {
     // generate event
     __u32 kZero = 0;
     struct socket_data_upload_event *event = bpf_map_lookup_elem(&socket_data_upload_event_per_cpu_map, &kZero);
@@ -374,8 +374,6 @@ static __inline void upload_socket_data(void *ctx, __u64 start_time, __u64 end_t
     }
 
     // basic data
-    event->start_time = start_time;
-    event->end_time = end_time;
     event->protocol = connection->protocol;
     event->direction = data_direction;
     event->conid = conid;
@@ -455,10 +453,10 @@ static __always_inline void process_write_data(struct pt_regs *ctx, __u64 id, st
     }
 
     // upload the socket detail
-    upload_socket_detail(ctx, conid, conn, func_name, args, ssl);
+    upload_socket_detail(ctx, args->start_nacs, curr_nacs, conid, conn, func_name, args, ssl);
 
     // upload the socket data if need
-    upload_socket_data(ctx, args->start_nacs, curr_nacs, conid, conn, args, bytes_count, msg_type, data_direction, ssl);
+    upload_socket_data(ctx, conid, conn, args, bytes_count, msg_type, data_direction, ssl);
 
     // add statics when is not ssl(native buffer)
     if (ssl == false) {

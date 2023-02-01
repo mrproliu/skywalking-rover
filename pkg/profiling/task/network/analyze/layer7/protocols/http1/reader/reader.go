@@ -95,11 +95,11 @@ func (m *MessageOpt) ContentTotalSize() int {
 }
 
 func (m *MessageOpt) StartTime() uint64 {
-	return m.HeaderBuffer().FirstSocketBuffer().StartTime()
+	return m.HeaderBuffer().Details().Front().Value.(*protocol.SocketDetailEvent).StartTime
 }
 
 func (m *MessageOpt) EndTime() uint64 {
-	return m.HeaderBuffer().LastSocketBuffer().EndTime()
+	return m.BodyBuffer().Details().Back().Value.(*protocol.SocketDetailEvent).EndTime
 }
 
 func (m *MessageOpt) Direction() base.SocketDataDirection {

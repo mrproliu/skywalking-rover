@@ -19,6 +19,7 @@ package base
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/apache/skywalking-rover/pkg/profiling/task/network/analyze/base"
 )
@@ -46,9 +47,7 @@ type SocketDataBuffer interface {
 	HaveReduceDataAfterChunk() bool
 
 	// StartTime the data start timestamp
-	StartTime() uint64
-	// EndTime the data end timestamp
-	EndTime() uint64
+	StartTime() *time.Time
 }
 
 type SocketDataUploadEvent struct {
@@ -58,8 +57,6 @@ type SocketDataUploadEvent struct {
 	Finished     uint8
 	Sequence0    uint16
 	DataLen      uint16
-	StartTime0   uint64
-	EndTime0     uint64
 	ConnectionID uint64
 	RandomID     uint64
 	DataID0      uint64
@@ -77,14 +74,6 @@ func (s *SocketDataUploadEvent) BufferData() []byte {
 
 func (s *SocketDataUploadEvent) BufferLen() int {
 	return int(s.DataLen)
-}
-
-func (s *SocketDataUploadEvent) StartTime() uint64 {
-	return s.StartTime0
-}
-
-func (s *SocketDataUploadEvent) EndTime() uint64 {
-	return s.EndTime0
 }
 
 func (s *SocketDataUploadEvent) Direction() base.SocketDataDirection {
@@ -119,6 +108,15 @@ func (s *SocketDataUploadEvent) HaveReduceDataAfterChunk() bool {
 	return s.HaveReduce == 1
 }
 
+type SocketDataUploadEventReceiver struct {
+	*SocketDataUploadEvent
+	ReceiveTime time.Time
+}
+
+func (d *SocketDataUploadEventReceiver) StartTime() *time.Time {
+	return &d.ReceiveTime
+}
+
 type SocketDataEventLimited struct {
 	SocketDataBuffer
 	from int
@@ -142,12 +140,14 @@ type SocketDetailEvent struct {
 	RandomID         uint64
 	DataID           uint64
 	TotalPackageSize uint64
+	StartTime        uint64
+	EndTime          uint64
 	IfIndex          uint32
 	PackageCount     uint8
 	FuncName         base.SocketFunctionName
 	RTTCount         uint8
 	Protocol         base.ConnectionProtocol
-	RTTTime          uint64
+	RTTTime          uint32
 }
 
 func (s *SocketDetailEvent) GenerateConnectionID() string {

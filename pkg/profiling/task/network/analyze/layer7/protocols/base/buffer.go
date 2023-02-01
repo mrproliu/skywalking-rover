@@ -452,7 +452,7 @@ func (r *Buffer) appendDetailEvent(event *SocketDetailEvent) {
 }
 
 // appendDataEvent insert the event to the event list following the order
-func (r *Buffer) appendDataEvent(event *SocketDataUploadEvent) {
+func (r *Buffer) appendDataEvent(event SocketDataBuffer) {
 	r.eventLocker.Lock()
 	defer r.eventLocker.Unlock()
 
@@ -489,14 +489,28 @@ func (r *Buffer) deleteExpireEvents(expireDuration time.Duration) int {
 	defer r.eventLocker.Unlock()
 
 	expireTime := time.Now().Add(-expireDuration)
+	// data event queue
+	count := r.deleteEventsWithJudgement(r.dataEvents, func(element *list.Element) bool {
+		startTime := element.Value.(SocketDataBuffer).StartTime()
+		return expireTime.After(*startTime)
+	})
+
+	// detail event queue
+	count += r.deleteEventsWithJudgement(r.detailEvents, func(element *list.Element) bool {
+		startTime := element.Value.(*SocketDetailEvent).StartTime
+		return expireTime.After(host.Time(startTime))
+	})
+	return count
+}
+
+func (r *Buffer) deleteEventsWithJudgement(l *list.List, checker func(element *list.Element) bool) int {
 	count := 0
-	for e := r.dataEvents.Front(); e != nil; {
-		startTime := host.Time(e.Value.(SocketDataBuffer).StartTime())
-		if expireTime.After(startTime) {
+	for e := l.Front(); e != nil; {
+		if checker(e) {
 			count++
 			cur := e
 			e = e.Next()
-			r.dataEvents.Remove(cur)
+			l.Remove(cur)
 		} else {
 			break
 		}
