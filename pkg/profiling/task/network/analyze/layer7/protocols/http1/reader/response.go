@@ -102,14 +102,16 @@ func ReadResponse(req *Request, buf *protocol.Buffer) (*Response, protocol.Parse
 		result.bodyBuffer = b
 	}
 
+	firstHeaderBuffer := result.HeaderBuffer().FirstSocketBuffer()
+	lastBodyBuffer := result.BodyBuffer().LastSocketBuffer()
 	if !result.MessageOpt.checkDetailAreReady() {
-		firstHeaderBuffer := result.HeaderBuffer().FirstSocketBuffer()
-		lastBodyBuffer := result.BodyBuffer().LastSocketBuffer()
-		log.Warnf("found the socket detail are not fill in current response, "+
+		log.Debugf("found the socket detail are not fill in current response, "+
 			"waiting for get the socket detail when next reading, connection id: %s, data id range: %d-%d",
 			firstHeaderBuffer.GenerateConnectionID(), firstHeaderBuffer.DataID(), lastBodyBuffer.DataID())
 		return nil, protocol.ParseResultSkipPackage, nil
 	}
+	log.Debugf("reading socket detail success, connection id: %s, data id range: %d-%d",
+		firstHeaderBuffer.GenerateConnectionID(), firstHeaderBuffer.DataID(), lastBodyBuffer.DataID())
 
 	return result, protocol.ParseResultSuccess, nil
 }
