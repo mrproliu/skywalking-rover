@@ -46,7 +46,7 @@ struct {
 
 static __inline void upload_socket_detail(void *ctx, __u64 start_time, __u64 end_time, __u64 conid, struct active_connection_t *connection, __u8 func_name, struct sock_data_args_t *data_args, bool ssl) {
     // only send the original socket syscall(not ssl) and the protocol must been set
-    if (ssl == true || connection->protocol == CONNECTION_PROTOCOL_UNKNOWN) {
+    if (connection->ssl != ssl || connection->protocol == CONNECTION_PROTOCOL_UNKNOWN) {
         return;
     }
     __u32 kZero = 0;
