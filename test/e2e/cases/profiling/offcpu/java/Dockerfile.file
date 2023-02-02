@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM eclipse-temurin:11-jre
+FROM eclipse-temurin:11-jdk
 
 WORKDIR /
 COPY File.java /File.java
