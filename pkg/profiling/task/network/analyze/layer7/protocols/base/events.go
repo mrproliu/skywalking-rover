@@ -48,6 +48,9 @@ type SocketDataBuffer interface {
 
 	// StartTime the data start timestamp
 	StartTime() *time.Time
+
+	// GenerateConnectionID generate the connection id
+	GenerateConnectionID() string
 }
 
 type SocketDataUploadEvent struct {

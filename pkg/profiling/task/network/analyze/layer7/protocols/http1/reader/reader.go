@@ -95,11 +95,23 @@ func (m *MessageOpt) ContentTotalSize() int {
 }
 
 func (m *MessageOpt) StartTime() uint64 {
-	return m.HeaderBuffer().Details().Front().Value.(*protocol.SocketDetailEvent).StartTime
+	details := m.HeaderBuffer().Details()
+	if details.Len() == 0 {
+		log.Warnf("could not found the detail in connection: %s, data id: %d", m.HeaderBuffer().FirstSocketBuffer().GenerateConnectionID(),
+			m.HeaderBuffer().FirstSocketBuffer().DataID())
+		return 0
+	}
+	return details.Front().Value.(*protocol.SocketDetailEvent).StartTime
 }
 
 func (m *MessageOpt) EndTime() uint64 {
-	return m.BodyBuffer().Details().Back().Value.(*protocol.SocketDetailEvent).EndTime
+	details := m.BodyBuffer().Details()
+	if details.Len() == 0 {
+		log.Warnf("could not found the detail in connection: %s, data id: %d", m.HeaderBuffer().FirstSocketBuffer().GenerateConnectionID(),
+			m.HeaderBuffer().FirstSocketBuffer().DataID())
+		return 0
+	}
+	return details.Back().Value.(*protocol.SocketDetailEvent).EndTime
 }
 
 func (m *MessageOpt) Direction() base.SocketDataDirection {
