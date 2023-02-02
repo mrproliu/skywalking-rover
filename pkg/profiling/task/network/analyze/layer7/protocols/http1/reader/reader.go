@@ -289,6 +289,11 @@ func (m *MessageOpt) checkBodyWithSize(buf *protocol.Buffer, reader *bufio.Reade
 	return slice, protocol.ParseResultSuccess, nil
 }
 
+// checkDetailAreReady check the socket detail data are fill success
+func (m *MessageOpt) checkDetailAreReady() bool {
+	return m.HeaderBuffer().IsSocketDetailFillSuccess() && m.BodyBuffer().IsSocketDetailFillSuccess()
+}
+
 type charsetReadWrapper struct {
 	reader io.Reader
 }

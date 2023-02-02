@@ -171,6 +171,17 @@ func (r *Buffer) DetectNotSendingLastPosition() *BufferPosition {
 	return nil
 }
 
+func (r *Buffer) IsSocketDetailFillSuccess() bool {
+	dataIdSet := make(map[uint64]bool)
+	for e := r.dataEvents.Front(); e != nil; e = e.Next() {
+		dataIdSet[e.Value.(SocketDataBuffer).DataID()] = true
+	}
+	for e := r.detailEvents.Front(); e != nil; e = e.Next() {
+		delete(dataIdSet, e.Value.(*SocketDetailEvent).DataID)
+	}
+	return len(dataIdSet) == 0
+}
+
 func CombineSlices(validated bool, buffers ...*Buffer) *Buffer {
 	if len(buffers) == 0 {
 		return nil
