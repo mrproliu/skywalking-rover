@@ -40,6 +40,7 @@ var (
 
 	// executable file profiling finders
 	profilingStatFinderList = []profiling.StatFinder{
+		profiling.NewPerfMapLibrary(),
 		profiling.NewGoLibrary(),
 	}
 
@@ -137,6 +138,20 @@ func analyzeProfilingInfo(context *analyzeContext, pid int32) (*profiling.Info, 
 			return nil, fmt.Errorf("could not init the module: %s, error: %v", moduleName, err)
 		}
 		modules[moduleName] = module
+	}
+
+	perfMapFile := fmt.Sprintf("/tmp/perf-%d.map", pid)
+	if path.Exists(perfMapFile) {
+		moduleRange := &profiling.ModuleRange{}
+		moduleRange.StartAddr = 0
+		moduleRange.EndAddr = 0
+		moduleRange.FileOffset = 0
+		module, err := context.GetFinder(perfMapFile).ToModule(pid, perfMapFile, perfMapFile, []*profiling.ModuleRange{moduleRange})
+		if err != nil {
+			log.Warnf("loading the perf map file error: %v", err)
+		} else {
+			modules[perfMapFile] = module
+		}
 	}
 	return profiling.NewInfo(modules), nil
 }

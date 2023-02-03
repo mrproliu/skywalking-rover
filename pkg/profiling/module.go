@@ -68,6 +68,7 @@ func (m *Module) Start(ctx context.Context, mgr *module.Manager) error {
 		return err
 	}
 	m.manager = manager
+	go addingTest(ctx, mgr)
 	return nil
 }
 

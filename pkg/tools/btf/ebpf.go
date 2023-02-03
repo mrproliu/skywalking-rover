@@ -20,6 +20,7 @@ package btf
 import (
 	"embed"
 	"fmt"
+	"math"
 	"path/filepath"
 	"sync"
 
@@ -52,7 +53,7 @@ func GetEBPFCollectionOptionsIfNeed() *ebpf.CollectionOptions {
 		spec = readSpec
 	})
 
-	return &ebpf.CollectionOptions{Programs: ebpf.ProgramOptions{KernelTypes: spec}}
+	return &ebpf.CollectionOptions{Programs: ebpf.ProgramOptions{KernelTypes: spec, LogSize: math.MaxUint32 >> 2}}
 }
 
 // getKernelBTFAddress means get the kernel BTF file path

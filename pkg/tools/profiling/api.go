@@ -20,6 +20,7 @@ package profiling
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/apache/skywalking-rover/pkg/logger"
 
@@ -122,6 +123,8 @@ func (i *Info) FindSymbolName(address uint64) string {
 			name := processSymbolName(sym.Name)
 			i.cacheAddrToSymbol[address] = name
 			return name
+		} else if strings.HasSuffix(mod.Name, ".map") {
+			mod.findAddr(offset)
 		}
 	}
 	if !foundModule {
@@ -158,7 +161,7 @@ func (i *Info) FindSymbolByRegex(rep string) (string, error) {
 
 func (m *Module) contains(addr uint64) (uint64, bool) {
 	for _, r := range m.Ranges {
-		if addr >= r.StartAddr && addr < r.EndAddr {
+		if addr >= r.StartAddr && (addr < r.EndAddr || r.EndAddr == 0) {
 			log.Debugf("found module %s could hanlde address: %d", m.Name, addr)
 			if m.Type == ModuleTypeSo || m.Type == ModuleTypeVDSO {
 				offset := addr - r.StartAddr + r.FileOffset

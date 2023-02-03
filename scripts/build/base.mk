@@ -53,3 +53,11 @@ container-command: build-base-container
 		--env HOME="/skywalking-rover" \
 		"${CONTAINER_COMMAND_IMAGE}:${CONTAINER_COMMAND_TAG}" \
 		make ${COMMAND}
+
+container-ssh: build-base-container
+	${CONTAINER_COMMAND_ENGINE} run -it --rm \
+		-v "${REPODIR}":/skywalking-rover -w /skywalking-rover --env MAKEFLAGS \
+		--env CFLAGS="-fdebug-prefix-map=/skywalking-rover=." \
+		--env HOME="/skywalking-rover" \
+		"${CONTAINER_COMMAND_IMAGE}:${CONTAINER_COMMAND_TAG}" \
+		/bin/bash
