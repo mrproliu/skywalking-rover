@@ -28,12 +28,11 @@ import (
 
 	"github.com/apache/skywalking-rover/pkg/profiling/task/network/analyze/base"
 	"github.com/apache/skywalking-rover/pkg/profiling/task/network/bpf"
-	"github.com/apache/skywalking-rover/pkg/tools"
 	"github.com/apache/skywalking-rover/pkg/tools/btf"
 	"github.com/apache/skywalking-rover/pkg/tools/elf"
-	"github.com/apache/skywalking-rover/pkg/tools/host"
 	"github.com/apache/skywalking-rover/pkg/tools/path"
 	"github.com/apache/skywalking-rover/pkg/tools/profiling"
+	"github.com/apache/skywalking-rover/pkg/tools/ssl"
 	"github.com/apache/skywalking-rover/pkg/tools/version"
 )
 
@@ -56,32 +55,69 @@ type OpenSSLFdSymAddrConfigInBPF struct {
 }
 
 func addSSLProcess(pid int, loader *bpf.Loader) error {
-	modules, err := tools.ProcessModules(int32(pid))
-	if err != nil {
-		return fmt.Errorf("read process modules error: %d, error: %v", pid, err)
-	}
+	register := ssl.NewSSLRegister(pid, loader.Linker)
 
-	// openssl process
-	if err1 := processOpenSSLProcess(pid, loader, modules); err1 != nil {
-		return err1
-	}
+	register.OpenSSL(func(libCrypto, libSSL *profiling.Module) error {
+		conf, err := buildSSLSymAddrConfig(libCrypto.Path)
+		if err != nil {
+			return err
+		}
+		if err := loader.OpensslFdSymaddrFinder.Put(uint32(pid), conf); err != nil {
+			return err
+		}
+		return processOpenSSLModule(loader, libSSL)
+	})
 
-	// envoy with boring ssl
-	if err1 := processEnvoyProcess(pid, loader, modules); err1 != nil {
-		return err1
-	}
+	register.Envoy(func(envoyModule *btf.UProbeExeFile) error {
+		envoyModule.AddLink("SSL_write", loader.OpensslWrite, loader.OpensslWriteRet)
+		envoyModule.AddLink("SSL_read", loader.OpensslRead, loader.OpensslReadRet)
+		return loader.HasError()
+	})
 
-	// GoTLS
-	if err1 := processGoProcess(pid, loader, modules); err1 != nil {
-		return err1
-	}
+	register.GoTLS(func(exeFile *btf.UProbeExeFile, elfFile *elf.File, v *version.Version) error {
+		// generate symbol offsets
+		symbolConfig, elfFile, err := generateGOTLSSymbolOffsets(register, pid, elfFile, v)
+		if err != nil {
+			return err
+		}
+		if symbolConfig == nil || elfFile == nil {
+			return nil
+		}
 
-	// Nodejs
-	if err1 := processNodeProcess(pid, loader, modules); err1 != nil {
-		return err1
-	}
+		// setting the locations
+		if err := loader.GoTlsArgsSymaddrMap.Put(uint32(pid), symbolConfig); err != nil {
+			return fmt.Errorf("setting the Go TLS argument location failure, pid: %d, error: %v", pid, err)
+		}
 
-	return nil
+		// uprobes
+		exeFile.AddLinkWithType("runtime.casgstatus", true, loader.GoCasgstatus)
+		exeFile.AddGoLink(goTLSWriteSymbol, loader.GoTlsWrite, loader.GoTlsWriteRet, elfFile)
+		exeFile.AddGoLink(goTLSReadSymbol, loader.GoTlsRead, loader.GoTlsReadRet, elfFile)
+
+		return loader.HasError()
+	})
+
+	register.Node(func(nodeModule, libSSLModule *profiling.Module, v *version.Version, needsReAttachSSL bool) error {
+		config, err := findNodeTLSAddrConfig(v)
+		if err != nil {
+			return err
+		}
+		// setting the locations
+		if err := loader.NodeTlsSymaddrMap.Put(uint32(pid), config); err != nil {
+			return fmt.Errorf("setting the node TLS location failure, pid: %d, error: %v", pid, err)
+		}
+		// register node tls
+		if err := registerNodeTLSProbes(v, loader, nodeModule, libSSLModule); err != nil {
+			return fmt.Errorf("register node TLS probes failure, pid: %d, error: %v", pid, err)
+		}
+		// attach the OpenSSL Probe if needs
+		if needsReAttachSSL {
+			return processOpenSSLModule(loader, libSSLModule)
+		}
+		return nil
+	})
+
+	return register.Execute()
 }
 
 func processOpenSSLProcess(pid int, loader *bpf.Loader, modules []*profiling.Module) error {
@@ -192,101 +228,101 @@ type GoStringInC struct {
 	Size uint64
 }
 
-func processGoProcess(pid int, loader *bpf.Loader, modules []*profiling.Module) error {
-	// check current process is go program
-	buildVersionSymbol := searchSymbol(modules, func(a, b string) bool {
-		return a == b
-	}, "runtime.buildVersion")
-	if buildVersionSymbol == nil {
-		log.Debugf("current process is not Go program, so won't add the GoTLS protos. pid: %d", pid)
-		return nil
-	}
-	pidExeFile := host.GetFileInHost(fmt.Sprintf("/proc/%d/exe", pid))
-	elfFile, err := elf.NewFile(pidExeFile)
-	if err != nil {
-		return fmt.Errorf("read executable file error: %v", err)
-	}
-	defer elfFile.Close()
-
-	v, err := getGoVersion(elfFile, buildVersionSymbol)
-	if err != nil {
-		return err
-	}
-
-	// generate symbol offsets
-	symbolConfig, elfFile, err := generateGOTLSSymbolOffsets(modules, pid, elfFile, v)
-	if err != nil {
-		return err
-	}
-	if symbolConfig == nil || elfFile == nil {
-		return nil
-	}
-
-	// setting the locations
-	if err := loader.GoTlsArgsSymaddrMap.Put(uint32(pid), symbolConfig); err != nil {
-		return fmt.Errorf("setting the Go TLS argument location failure, pid: %d, error: %v", pid, err)
-	}
-
-	// uprobes
-	exeFile := loader.OpenUProbeExeFile(pidExeFile)
-	exeFile.AddLinkWithType("runtime.casgstatus", true, loader.GoCasgstatus)
-	exeFile.AddGoLink(goTLSWriteSymbol, loader.GoTlsWrite, loader.GoTlsWriteRet, elfFile)
-	exeFile.AddGoLink(goTLSReadSymbol, loader.GoTlsRead, loader.GoTlsReadRet, elfFile)
-
-	return loader.HasError()
-}
-
-func processNodeProcess(pid int, loader *bpf.Loader, modules []*profiling.Module) error {
-	moduleName1, moduleName2, libsslName := "/nodejs", "/node", "libssl.so"
-	processModules, err := findProcessModules(modules, moduleName1, moduleName2, libsslName)
-	if err != nil {
-		return err
-	}
-	nodeModule := processModules[moduleName1]
-	libsslModule := processModules[libsslName]
-	needsReAttachSSL := false
-	if nodeModule == nil {
-		nodeModule = processModules[moduleName2]
-	}
-	if nodeModule == nil {
-		log.Debugf("current process is not nodejs program, so won't add the nodejs protos. pid: %d", pid)
-		return nil
-	}
-	if libsslModule == nil {
-		if searchSymbol([]*profiling.Module{nodeModule}, func(a, b string) bool {
-			return a == b
-		}, "SSL_read") == nil || searchSymbol([]*profiling.Module{nodeModule}, func(a, b string) bool {
-			return a == b
-		}, "SSL_write") == nil {
-			log.Warnf("could not found the SSL_read/SSL_write under the nodejs program, so ignore. pid: %d", pid)
-			return nil
-		}
-		libsslModule = nodeModule
-		needsReAttachSSL = true
-	}
-	v, err := getNodeVersion(nodeModule.Path)
-	if err != nil {
-		return fmt.Errorf("read nodejs version failure, pid: %d, error: %v", pid, err)
-	}
-	log.Debugf("read the nodejs version, pid: %d, version: %s", pid, v)
-	config, err := findNodeTLSAddrConfig(v)
-	if err != nil {
-		return err
-	}
-	// setting the locations
-	if err := loader.NodeTlsSymaddrMap.Put(uint32(pid), config); err != nil {
-		return fmt.Errorf("setting the node TLS location failure, pid: %d, error: %v", pid, err)
-	}
-	// register node tls
-	if err := registerNodeTLSProbes(v, loader, nodeModule, libsslModule); err != nil {
-		return fmt.Errorf("register node TLS probes failure, pid: %d, error: %v", pid, err)
-	}
-	// attach the OpenSSL Probe if needs
-	if needsReAttachSSL {
-		return processOpenSSLModule(loader, libsslModule)
-	}
-	return nil
-}
+//func processGoProcess(pid int, loader *bpf.Loader, modules []*profiling.Module) error {
+//	// check current process is go program
+//	buildVersionSymbol := searchSymbol(modules, func(a, b string) bool {
+//		return a == b
+//	}, "runtime.buildVersion")
+//	if buildVersionSymbol == nil {
+//		log.Debugf("current process is not Go program, so won't add the GoTLS protos. pid: %d", pid)
+//		return nil
+//	}
+//	pidExeFile := host.GetFileInHost(fmt.Sprintf("/proc/%d/exe", pid))
+//	elfFile, err := elf.NewFile(pidExeFile)
+//	if err != nil {
+//		return fmt.Errorf("read executable file error: %v", err)
+//	}
+//	defer elfFile.Close()
+//
+//	v, err := getGoVersion(elfFile, buildVersionSymbol)
+//	if err != nil {
+//		return err
+//	}
+//
+//	// generate symbol offsets
+//	symbolConfig, elfFile, err := generateGOTLSSymbolOffsets(modules, pid, elfFile, v)
+//	if err != nil {
+//		return err
+//	}
+//	if symbolConfig == nil || elfFile == nil {
+//		return nil
+//	}
+//
+//	// setting the locations
+//	if err := loader.GoTlsArgsSymaddrMap.Put(uint32(pid), symbolConfig); err != nil {
+//		return fmt.Errorf("setting the Go TLS argument location failure, pid: %d, error: %v", pid, err)
+//	}
+//
+//	// uprobes
+//	exeFile := loader.OpenUProbeExeFile(pidExeFile)
+//	exeFile.AddLinkWithType("runtime.casgstatus", true, loader.GoCasgstatus)
+//	exeFile.AddGoLink(goTLSWriteSymbol, loader.GoTlsWrite, loader.GoTlsWriteRet, elfFile)
+//	exeFile.AddGoLink(goTLSReadSymbol, loader.GoTlsRead, loader.GoTlsReadRet, elfFile)
+//
+//	return loader.HasError()
+//}
+//
+//func processNodeProcess(pid int, loader *bpf.Loader, modules []*profiling.Module) error {
+//	moduleName1, moduleName2, libsslName := "/nodejs", "/node", "libssl.so"
+//	processModules, err := findProcessModules(modules, moduleName1, moduleName2, libsslName)
+//	if err != nil {
+//		return err
+//	}
+//	nodeModule := processModules[moduleName1]
+//	libsslModule := processModules[libsslName]
+//	needsReAttachSSL := false
+//	if nodeModule == nil {
+//		nodeModule = processModules[moduleName2]
+//	}
+//	if nodeModule == nil {
+//		log.Debugf("current process is not nodejs program, so won't add the nodejs protos. pid: %d", pid)
+//		return nil
+//	}
+//	if libsslModule == nil {
+//		if searchSymbol([]*profiling.Module{nodeModule}, func(a, b string) bool {
+//			return a == b
+//		}, "SSL_read") == nil || searchSymbol([]*profiling.Module{nodeModule}, func(a, b string) bool {
+//			return a == b
+//		}, "SSL_write") == nil {
+//			log.Warnf("could not found the SSL_read/SSL_write under the nodejs program, so ignore. pid: %d", pid)
+//			return nil
+//		}
+//		libsslModule = nodeModule
+//		needsReAttachSSL = true
+//	}
+//	v, err := getNodeVersion(nodeModule.Path)
+//	if err != nil {
+//		return fmt.Errorf("read nodejs version failure, pid: %d, error: %v", pid, err)
+//	}
+//	log.Debugf("read the nodejs version, pid: %d, version: %s", pid, v)
+//	config, err := findNodeTLSAddrConfig(v)
+//	if err != nil {
+//		return err
+//	}
+//	// setting the locations
+//	if err := loader.NodeTlsSymaddrMap.Put(uint32(pid), config); err != nil {
+//		return fmt.Errorf("setting the node TLS location failure, pid: %d, error: %v", pid, err)
+//	}
+//	// register node tls
+//	if err := registerNodeTLSProbes(v, loader, nodeModule, libsslModule); err != nil {
+//		return fmt.Errorf("register node TLS probes failure, pid: %d, error: %v", pid, err)
+//	}
+//	// attach the OpenSSL Probe if needs
+//	if needsReAttachSSL {
+//		return processOpenSSLModule(loader, libsslModule)
+//	}
+//	return nil
+//}
 
 var nodeTLSAddrWithVersions = []struct {
 	v    *version.Version
@@ -406,7 +442,7 @@ func getGoVersion(elfFile *elf.File, versionSymbol *profiling.Symbol) (*version.
 	return version.Read(submatch[1], submatch[2], "")
 }
 
-func generateGOTLSSymbolOffsets(modules []*profiling.Module, _ int, elfFile *elf.File, v *version.Version) (*GoTLSSymbolAddresses, *elf.File, error) {
+func generateGOTLSSymbolOffsets(register *ssl.Register, _ int, elfFile *elf.File, v *version.Version) (*GoTLSSymbolAddresses, *elf.File, error) {
 	reader, err := elfFile.NewDwarfReader(
 		goTLSReadSymbol, goTLSWriteSymbol, goTLSGIDStatusSymbol,
 		goTLSPollFDSymbol, goTLSConnSymbol, goTLSRuntimeG)
@@ -416,7 +452,7 @@ func generateGOTLSSymbolOffsets(modules []*profiling.Module, _ int, elfFile *elf
 
 	symbolAddresses := &GoTLSSymbolAddresses{}
 
-	sym := searchSymbol(modules, func(a, b string) bool {
+	sym := register.SearchSymbol(func(a, b string) bool {
 		return a == b
 	}, "go.itab.*net.TCPConn,net.Conn")
 	if sym == nil {

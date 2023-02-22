@@ -22,7 +22,7 @@ logger:
 core:
   backend:
     # The backend server address
-    addr: ${ROVER_BACKEND_ADDR:localhost:11800}
+    addr: ${ROVER_BACKEND_ADDR:192.168.50.193:11800}
     # The TLS switch
     enable_TLS: ${ROVER_BACKEND_ENABLE_TLS:false}
     # The file path of client.pem. The config only works when opening the TLS switch.
@@ -40,7 +40,7 @@ core:
 
 process_discovery:
   # The period of report or keep alive process(second)
-  heartbeat_period: ${ROVER_PROCESS_DISCOVERY_HEARTBEAT_PERIOD:20s}
+  heartbeat_period: ${ROVER_PROCESS_DISCOVERY_HEARTBEAT_PERIOD:5s}
   # The agent sends the process properties to the backend every: heartbeart period * properties report period
   properties_report_period: ${ROVER_PROCESS_DISCOVERY_PROPERTIES_REPORT_PERIOD:10}
   # Scan process from linux
@@ -48,7 +48,7 @@ process_discovery:
     # The period to detect the process
     period: ${ROVER_PROCESS_DISCOVERY_SCAN_PERIOD:3s}
     # The process detection modes of the scanner. Support "REGEX", "AGENT_SENSOR"
-    mode: ${ROVER_PROCESS_DISCOVERY_SCAN_MODE:AGENT_SENSOR}
+    mode: ${ROVER_PROCESS_DISCOVERY_SCAN_MODE:REGEX}
     agent:
       # Set the agent refresh period
       process_status_refresh_period: ${ROVER_PROCESS_DISCOVERY_AGENT_PROCESS_STATUS_REFRESH_PERIOD:1m}
@@ -56,14 +56,14 @@ process_discovery:
       # Use regex string to locate the processes
       # Duplicate entities cannot be reported. If multiple entity are generated, only one process will be report
       # If the multiple finders could match the same one process, only the first finder could be selected and report
-      - match_cmd: ${ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_MATCH_CMD:}
+      - match_cmd: ${ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_MATCH_CMD:^./httpserver}
         # The Layer need to relate to the process entity
         layer: ${ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_LAYER:OS_LINUX}
         # The Service Name need to relate to the process entity
-        service_name: ${ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_SERVICE_NAME:}
+        service_name: ${ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_SERVICE_NAME:test}
         # The Service Instance Name need to relate to the process entity
         # By default the instance name is the host IP v4 address from "en0" net interface
-        instance_name: ${ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_INSTANCE_NAME:{{.Rover.HostIPV4 "en0"}}}
+        instance_name: ${ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_INSTANCE_NAME:{{.Rover.HostIPV4 "ens33"}}}
         # The Process Name need to relate to the process entity
         # By default, the process name is the executable name of the process
         process_name: ${ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_PROCESS_NAME:{{.Process.ExeName}}}
