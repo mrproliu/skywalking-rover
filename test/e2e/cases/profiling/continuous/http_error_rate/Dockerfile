@@ -14,27 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG BASE_IMAGE=apache/skywalking-rover:latest
-FROM $BASE_IMAGE as build
+FROM golang:1.17
 
-ARG VERSION="latest"
+WORKDIR /
+COPY http_error_rate/ /service
 
-WORKDIR /src
+WORKDIR /service
+RUN go build -o service .
 
-COPY . .
+COPY base/ssl /usr/local/share/ca-certificates/ssl
+RUN update-ca-certificates
 
-ENV CGO_ENABLED=0
-
-RUN VERSION=$VERSION make generate && make linux
-RUN mv /src/bin/skywalking-rover-${VERSION}-linux-amd64 /src/bin/skywalking-rover
-
-FROM alpine
-
-VOLUME /skywalking/configs
-
-WORKDIR /skywalking
-
-COPY --from=build /src/bin/skywalking-rover /
-COPY --from=build /src/configs /skywalking/configs
-
-CMD ["/skywalking-rover", "start", "--config", "/skywalking/configs/rover_configs.yaml"]
+CMD ["/service/response_error"]

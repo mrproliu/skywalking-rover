@@ -17,43 +17,34 @@ version: '2.1'
 
 services:
   oap:
-    image: skywalking/oap:latest
-    expose:
-      - 11800
-      - 12800
-      - 10051
-    networks:
-      - e2e
-    healthcheck:
-      test: ["CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/11800"]
-      interval: 5s
-      timeout: 60s
-      retries: 120
+    extends:
+      file: ../../../../base/base-compose.yml
+      service: oap
+    ports:
+      - 12800:12800
 
   rover:
-    image: apache/skywalking-rover:latest
-    networks:
-      - e2e
-    privileged: true
-    pid: host
+    extends:
+      file: ../../../../base/base-compose.yml
+      service: rover
+    depends_on:
+      oap:
+        condition: service_healthy
     environment:
-      ROVER_HOST_MAPPING: /host
-      ROVER_BACKEND_ADDR: oap:11800
-      ROVER_PROCESS_DISCOVERY_HEARTBEAT_PERIOD: 2s
-      ROVER_PROCESS_DISCOVERY_SCAN_PERIOD: 3s
       ROVER_PROCESS_DISCOVERY_SCAN_MODE: "REGEX"
-      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_MATCH_CMD: sqrt
+      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_MATCH_CMD: MultiThread
       ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_LAYER: OS_LINUX
-      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_SERVICE_NAME: sqrt
+      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_SERVICE_NAME: test-continuous
       ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_INSTANCE_NAME: test-instance
       ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_PROCESS_NAME: "{{.Process.ExeName}}"
-      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_LABELS: e2e-label1,e2e-label2
-      ROVER_PROFILING_ACTIVE: "true"
-      ROVER_PROFILING_CHECK_INTERVAL: 2s
-      ROVER_PROFILING_FLUSH_INTERVAL: 5s
-      ROVER_PROFILING_TASK_ON_CPU_DUMP_PERIOD: 9ms
-    volumes:
-      - /:/host
+      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_LABELS: ""
+
+  continuous_process_thread:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    networks:
+      - e2e
 
 networks:
   e2e:

@@ -14,27 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG BASE_IMAGE=apache/skywalking-rover:latest
-FROM $BASE_IMAGE as build
+FROM eclipse-temurin:11-jre
 
-ARG VERSION="latest"
+WORKDIR /
+COPY MuiltiThread.java /
 
-WORKDIR /src
+RUN javac /MuiltiThread.java
 
-COPY . .
-
-ENV CGO_ENABLED=0
-
-RUN VERSION=$VERSION make generate && make linux
-RUN mv /src/bin/skywalking-rover-${VERSION}-linux-amd64 /src/bin/skywalking-rover
-
-FROM alpine
-
-VOLUME /skywalking/configs
-
-WORKDIR /skywalking
-
-COPY --from=build /src/bin/skywalking-rover /
-COPY --from=build /src/configs /skywalking/configs
-
-CMD ["/skywalking-rover", "start", "--config", "/skywalking/configs/rover_configs.yaml"]
+CMD ["java /MultiThread"]
