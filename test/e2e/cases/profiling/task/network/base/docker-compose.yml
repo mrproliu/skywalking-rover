@@ -51,7 +51,7 @@ services:
 
   oap:
     extends:
-      file: ../../../../base/base-compose.yml
+      file: ../../../../../base/base-compose.yml
       service: oap
     environment:
       SW_METER_ANALYZER_ACTIVE_FILES: network-profiling
@@ -68,7 +68,7 @@ services:
 
   rover:
     extends:
-      file: ../../../../base/base-compose.yml
+      file: ../../../../../base/base-compose.yml
       service: rover
     volumes:
       - ./rover_configs.yaml:/skywalking/configs/rover_configs.yaml
