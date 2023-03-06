@@ -15,12 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package base
+package main
 
 import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 )
 
 func provider(w http.ResponseWriter, req *http.Request) {
@@ -33,6 +34,8 @@ func provider(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	// force as http/1.1 server, we only support analyze http1 server for now
+	os.Setenv("GODEBUG", "http2server=0")
 	http.HandleFunc("/provider", provider)
 
 	err := http.ListenAndServeTLS(":10443", "/ssl_data/service.crt", "/ssl_data/service.key", nil)
