@@ -42,6 +42,7 @@ services:
       file: ../../../../base/base-compose.yml
       service: rover
     environment:
+      ROVER_LOGGER_LEVEL: "DEBUG"
       ROVER_PROCESS_DISCOVERY_SCAN_MODE: "REGEX"
       ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_MATCH_CMD: response_timeout
       ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_LAYER: OS_LINUX

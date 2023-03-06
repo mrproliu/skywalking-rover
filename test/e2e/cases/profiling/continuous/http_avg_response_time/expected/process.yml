@@ -29,7 +29,7 @@
     - name: pid
       value: {{ notEmpty .value }}
     - name: command_line
-      value: /response_timeoput
+      value: /service/response_timeout
     {{- end }}
   labels: []
 {{- end }}
