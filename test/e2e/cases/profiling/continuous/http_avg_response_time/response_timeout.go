@@ -20,6 +20,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -30,6 +31,8 @@ func provider(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	// force as http/1.1 server
+	os.Setenv("GODEBUG", "http2server=0")
 	http.HandleFunc("/provider", provider)
 
 	err := http.ListenAndServeTLS(":10443", "/ssl_data/service.crt", "/ssl_data/service.key", nil)
