@@ -22,6 +22,8 @@ services:
       dockerfile: http_avg_response_time/Dockerfile
     ports:
       - 10443:10443
+    volumes:
+      - ssl:/ssl_data
     healthcheck:
       test: [ "CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/10443" ]
       interval: 5s
