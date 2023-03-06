@@ -20,9 +20,9 @@ WORKDIR /
 COPY http_avg_response_time/ /service
 
 WORKDIR /service
-RUN go build -o response_timeoput response_timeout.go
+RUN go build -o response_timeout response_timeout.go
 
 COPY ssl /usr/local/share/ca-certificates/ssl
 RUN update-ca-certificates
 
-CMD ["/service/response_timeoput"]
+CMD ["/service/response_timeout"]
