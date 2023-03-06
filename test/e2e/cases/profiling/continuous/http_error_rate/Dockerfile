@@ -22,7 +22,7 @@ COPY http_error_rate/ /service
 WORKDIR /service
 RUN go build -o response_error response_error.go
 
-COPY base/ssl /usr/local/share/ca-certificates/ssl
+COPY ssl /usr/local/share/ca-certificates/ssl
 RUN update-ca-certificates
 
 CMD ["/service/response_error"]
