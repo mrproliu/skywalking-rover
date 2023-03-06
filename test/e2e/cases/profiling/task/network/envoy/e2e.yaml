@@ -18,7 +18,7 @@
 setup:
   env: kind
   file: kind.yaml
-  init-system-environment: ../../../../base/env
+  init-system-environment: ../../../../../base/env
   kind:
     import-images:
       - apache/skywalking-rover:latest
