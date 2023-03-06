@@ -21,17 +21,17 @@
   serviceinstancename: test-instance
   processlabels: []
   processid: {{ notEmpty .processid }}
-  processname: response_timeout
+  processname: response_error
   taskstarttime: {{ ge .taskstarttime 1 }}
   triggertype: CONTINUOUS_PROFILING
   fixedtriggerduration: 600
   continuousprofilingcauses:
-    - type: HTTP_AVG_RESPONSE_TIME
+    - type: HTTP_ERROR_RATE
       singlevalue: null
       uri:
         uriregex: null
         uripath: /provider
-        threshold: 50000
+        threshold: 1000
         current: {{ ge (index .continuousprofilingcauses 0).uri.current 1 }}
   targettype: NETWORK
   createtime: {{ ge .createtime 1 }}

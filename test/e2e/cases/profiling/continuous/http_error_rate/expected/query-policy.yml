@@ -16,7 +16,7 @@
 - type: NETWORK
   checkitems:
     - type: HTTP_ERROR_RATE
-      threshold: "00"
+      threshold: "10"
       period: 10
       count: 1
       urilist:

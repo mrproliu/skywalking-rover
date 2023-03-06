@@ -60,7 +60,7 @@ verify:
     - query: |
         swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml metrics multiple-linear \
           --service-name test-continuous --instance-name test-instance --process-name sqrt --name continuous_profiling_http_avg_response_time |yq e 'to_entries | with(.[] ; .value=(.value | to_entries))' -
-      expected: expected/metrics-has-value.yml
+      expected: expected/metrics-has-value-labeld.yml
 
     # check triggered profiling task
     - query: |

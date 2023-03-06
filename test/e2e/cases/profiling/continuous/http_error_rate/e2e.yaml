@@ -51,7 +51,7 @@ verify:
 
     # policy setting
     - query: |
-        swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml profiling continuous set --service-name test-continuous --config test/e2e/cases/profiling/continuous/http_avg_response_time/policy.yaml
+        swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml profiling continuous set --service-name test-continuous --config test/e2e/cases/profiling/continuous/http_error_rate/policy.yaml
       expected: expected/policy-set.yml
     - query: swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml profiling continuous ls --service-name test-continuous
       expected: expected/query-policy.yml
@@ -59,8 +59,8 @@ verify:
     # check profiling metrics
     - query: |
         swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml metrics multiple-linear \
-          --service-name test-continuous --instance-name test-instance --process-name sqrt --name continuous_profiling_http_avg_response_time |yq e 'to_entries | with(.[] ; .value=(.value | to_entries))' -
-      expected: expected/metrics-has-value.yml
+          --service-name test-continuous --instance-name test-instance --process-name response_error --name continuous_profiling_http_error_rate |yq e 'to_entries | with(.[] ; .value=(.value | to_entries))' -
+      expected: expected/metrics-has-value-labeld.yml
 
     # check triggered profiling task
     - query: |
