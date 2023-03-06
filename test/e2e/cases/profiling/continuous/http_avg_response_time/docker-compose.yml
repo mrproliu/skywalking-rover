@@ -17,23 +17,9 @@ version: '2.1'
 
 services:
   service:
-    extends:
-      file: ../base/docker-compose.yml
-      service: service
-    ports:
-      - 443
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-    healthcheck:
-      test: [ "CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/80" ]
-      interval: 5s
-      timeout: 60s
-      retries: 120
-
-  proxy:
-    extends:
-      file: ../base/docker-compose.yml
-      service: proxy
+    build:
+      context: ../
+      dockerfile: http_avg_response_time/Dockerfile
     ports:
       - 10443:10443
     healthcheck:
@@ -53,5 +39,13 @@ services:
     extends:
       file: ../base/base-compose.yml
       service: rover
+    environment:
+      ROVER_PROCESS_DISCOVERY_SCAN_MODE: "REGEX"
+      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_MATCH_CMD: response_timeoput
+      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_LAYER: OS_LINUX
+      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_SERVICE_NAME: test-continuous
+      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_INSTANCE_NAME: test-instance
+      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_PROCESS_NAME: "{{.Process.ExeName}}"
+      ROVER_PROCESS_DISCOVERY_REGEX_SCANNER_LABELS: ""
 networks:
   e2e:

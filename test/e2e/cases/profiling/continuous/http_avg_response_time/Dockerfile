@@ -22,7 +22,7 @@ COPY http_avg_response_time/ /service
 WORKDIR /service
 RUN go build -o service .
 
-COPY base/ssl /usr/local/share/ca-certificates/ssl
+COPY ssl /usr/local/share/ca-certificates/ssl
 RUN update-ca-certificates
 
 CMD ["/service/response_timeoput"]

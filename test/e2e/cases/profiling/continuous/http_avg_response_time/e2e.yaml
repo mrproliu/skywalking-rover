@@ -26,6 +26,13 @@ setup:
     - name: install swctl
       command: bash test/e2e/base/scripts/prepare/setup-e2e-shell/install.sh swctl
 
+trigger:
+  action: http
+  interval: 3s
+  times: 10
+  url: https://${service_host}:${service_10443}/provider
+  method: GET
+
 verify:
   # verify with retry strategy
   retry:
@@ -34,3 +41,28 @@ verify:
     # the interval between two retries, in millisecond.
     interval: 10s
   cases:
+    # metadata
+    - query: swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml service ls
+      expected: expected/service.yml
+    - query: swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml instance ls --service-name test-continuous
+      expected: expected/instance.yml
+    - query: swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml process ls --service-name test-continuous --instance-name test-instance
+      expected: expected/process.yml
+
+    # policy setting
+    - query: |
+        swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml profiling continuous set --service-name test-continuous --config test/e2e/cases/profiling/continuous/http_avg_response_time/policy.yaml
+      expected: expected/policy-set.yml
+    - query: swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml profiling continuous ls --service-name test-continuous
+      expected: expected/query-policy.yml
+
+    # check profiling metrics
+    - query: |
+        swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml metrics linear \
+          --service-name test-continuous --instance-name test-instance --process-name sqrt --name continuous_profiling_process_cpu |yq e 'to_entries' -
+      expected: expected/metrics-has-value.yml
+
+    # check triggered profiling task
+    - query: |
+        swctl --base-url=http://${oap_host}:${oap_12800}/graphql --display yaml profiling ebpf list --service-name test-continuous --trigger CONTINUOUS_PROFILING
+      expected: expected/trigger-task.yml
