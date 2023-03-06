@@ -148,6 +148,8 @@ func (n *HTTPBasedChecker[Data]) ReceiveBufferEvent(event network.BufferEvent) {
 		return
 	}
 
+	log.Debugf("receving http event, pid: %d, request URI: %s, duration: %dms, response error: %t",
+		event.Pid(), event.RequestURI(), event.Duration(), event.IsResponseError())
 	for _, policyInfo := range info.PolicyWithWindows {
 		var matchesWindows *base.TimeWindows[network.BufferEvent, float64]
 		// match with the regex or URI list
@@ -158,9 +160,11 @@ func (n *HTTPBasedChecker[Data]) ReceiveBufferEvent(event network.BufferEvent) {
 				}
 			}
 			if matchesWindows == nil {
+				log.Warnf("cannot found the uri path related windows")
 				continue
 			}
 		} else if policyInfo.uriRegex != nil && !policyInfo.uriRegex.MatchString(event.RequestURI()) {
+			log.Warnf("cannot found the uri regex related windows")
 			continue
 		}
 
