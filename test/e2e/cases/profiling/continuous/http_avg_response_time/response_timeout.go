@@ -31,7 +31,7 @@ func provider(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	// force as http/1.1 server
+	// force as http/1.1 server, we only support analyze http1 server for now
 	os.Setenv("GODEBUG", "http2server=0")
 	http.HandleFunc("/provider", provider)
 

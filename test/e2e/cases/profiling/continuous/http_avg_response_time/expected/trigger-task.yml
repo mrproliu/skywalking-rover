@@ -21,16 +21,18 @@
   serviceinstancename: test-instance
   processlabels: []
   processid: {{ notEmpty .processid }}
-  processname: sqrt
+  processname: response_timeout
   taskstarttime: {{ ge .taskstarttime 1 }}
   triggertype: CONTINUOUS_PROFILING
   fixedtriggerduration: 600
   continuousprofilingcauses:
-    - type: PROCESS_CPU
-      singlevalue:
-        threshold: 1000
-        current: {{ ge (index .continuousprofilingcauses 0).singlevalue.current 1 }}
-      uri: null
-  targettype: ON_CPU
+    - type: HTTP_AVG_RESPONSE_TIME
+      singlevalue: null
+      uri:
+        uriregex: null
+        uripath: /provider
+        threshold: 50000
+        current: {{ ge (index .continuousprofilingcauses 0).uri.current 1 }}
+  targettype: NETWORK
   createtime: {{ ge .createtime 1 }}
 {{- end }}

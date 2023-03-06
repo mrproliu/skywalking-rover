@@ -15,7 +15,7 @@
 
 {{- contains . }}
 - id: {{ notEmpty .id }}
-  name: sqrt
+  name: response_timeout
   serviceid: {{ b64enc "test-continuous" }}.1
   servicename: test-continuous
   instanceid: {{ b64enc "test-continuous" }}.1_{{ b64enc "test-instance" }}
