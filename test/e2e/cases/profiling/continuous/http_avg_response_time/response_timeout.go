@@ -26,7 +26,7 @@ import (
 func provider(w http.ResponseWriter, req *http.Request) {
 	time.Sleep(time.Second)
 	w.Header().Set("Content-Type", "text/plain")
-	_, _ = w.Write([]byte("success"))
+	_, _ = w.Write([]byte("success" + req.Proto))
 }
 
 func main() {
