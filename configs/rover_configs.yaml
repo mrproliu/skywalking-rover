@@ -149,6 +149,6 @@ profiling:
     check_interval: ${ROVER_PROFILING_CONTINUOUS_CHECK_INTERVAL:5s}
     trigger:
       # the duration of the profiling task
-      execute_duration: ${ROVER_PROFILING_CONTINUOUS_TRIGGER_EXECUTE_DURATION:10m}
+      execute_duration: ${ROVER_PROFILING_CONTINUOUS_TRIGGER_EXECUTE_DURATION:1m}
       # the minimal duration between the execution of the same profiling task
-      silence_duration: ${ROVER_PROFILING_CONTINUOUS_TRIGGER_SILENCE_DURATION:20m}
+      silence_duration: ${ROVER_PROFILING_CONTINUOUS_TRIGGER_SILENCE_DURATION:5m}
