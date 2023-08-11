@@ -164,12 +164,12 @@ func (r *Register) getGoVersionByStrings(p string) (*version.Version, error) {
 	return nil, fmt.Errorf("go version is not found from strings")
 }
 
-func (r *Register) gettingGoVersionFromString(s string) (*version.Version, error, bool) {
+func (r *Register) gettingGoVersionFromString(s string) (v *version.Version, err error, success bool) {
 	submatch := goVersionRegex.FindStringSubmatch(s)
 	if len(submatch) != 3 {
 		return nil, nil, false
 	}
-	v, err := version.Read(submatch[1], submatch[2], "")
+	v, err = version.Read(submatch[1], submatch[2], "")
 	return v, err, true
 }
 
