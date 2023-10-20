@@ -127,6 +127,8 @@ jobs:
         run: find docker-images -name "*.tar" -exec docker load -i {} \;
       - name: Set env var
         run: echo "${{ matrix.test.env }}"  >> $GITHUB_ENV
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: ${{ matrix.test.name }}
         uses: apache/skywalking-infra-e2e@c3eb3241f649289465eda12af8214ca60aaaaa5f
         with:
