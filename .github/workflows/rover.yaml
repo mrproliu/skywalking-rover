@@ -178,8 +178,6 @@ jobs:
         run: |
           bash test/e2e/base/scripts/gen-selfsigned-ssl.sh service $(pwd)/test/e2e/cases/profiling/task/network/base/ssl/
           bash test/e2e/base/scripts/gen-selfsigned-ssl.sh proxy $(pwd)/test/e2e/cases/profiling/task/network/base/ssl/
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - name: ${{ matrix.test.name }}
         uses: apache/skywalking-infra-e2e@c3eb3241f649289465eda12af8214ca60aaaaa5f
         with:
