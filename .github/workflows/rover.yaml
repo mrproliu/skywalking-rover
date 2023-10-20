@@ -193,6 +193,7 @@ jobs:
           name: logs
           path: "${{ env.SW_INFRA_E2E_LOG_DIR }}"
 
+
   continuous-profiling-e2e-tests:
     name: Continuous Profiling E2E tests
     needs: [ docker ]
