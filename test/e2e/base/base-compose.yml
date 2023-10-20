@@ -54,6 +54,7 @@ services:
       ROVER_PROFILING_TASK_ON_CPU_DUMP_PERIOD: 9ms
     volumes:
       - /:/host
+      - /sys/kernel:/sys/kernel
 
 networks:
   e2e:
