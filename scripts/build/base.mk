@@ -37,7 +37,7 @@ CONTAINER_COMMAND_TAG ?= v$(VERSION)
 CONTAINER_COMMAND_CLANG ?= clang
 CONTAINER_COMMAND_STRIP ?= llvm-strip
 CONTAINER_COMMAND_CFLAGS := -O2 -g -Wall -Werror $(CFLAGS)
-CONTAINER_PLATFORMS ?= --platform linux/amd64,linux/arm64
+CONTAINER_PLATFORMS ?= --platform linux/amd64
 
 SYS_ARCH := $(shell uname -m)
 

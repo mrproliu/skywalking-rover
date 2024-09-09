@@ -234,6 +234,7 @@ static __always_inline void submit_new_connection(void* ctx, bool success, __u32
             BPF_CORE_READ_INTO(&port, s, __sk_common.skc_dport);
             event->remote_port = bpf_ntohs(port);
             BPF_CORE_READ_INTO(&event->remote_addr_v4, s, __sk_common.skc_daddr);
+            bpf_printk("create connection conid: %lld, socket: %lld, remote_addr_v4: %lld", conid, s, event->remote_addr_v4);
         } else if (event->socket_family == AF_INET6) {
             BPF_CORE_READ_INTO(&port, s, __sk_common.skc_num);
             event->local_port = port;
