@@ -575,6 +575,10 @@ int tracepoint_skb_copy_datagram_iovec(struct trace_point_skb_copy_datagram_iove
     struct sock *sock = _(buff->sk);
     if (sock != NULL) {
         data_args->sk_role = get_sock_role(data_args->sk_role, sock);
+
+        __u32 remote_addr_v4 = 0;
+        BPF_CORE_READ_INTO(&remote_addr_v4, sock, __sk_common.skc_daddr);
+        bpf_printk("recv sock: %lld, remote_addr_v4: %lld", sock, remote_addr_v4);
     }
 
     data_args->package_count++;

@@ -25,10 +25,6 @@ int tcp_v4_rcv(struct pt_regs * ctx) {
     if (detail != NULL) {
         detail->enter_tcp_rcv_time = bpf_ktime_get_ns();
         save_l24_tmp_args(L24_TEMP_ARGS_TCP_RCV, skb);
-        struct sock *sock = _(skb->sk);
-        __u32 remote_addr_v4 = 0;
-        BPF_CORE_READ_INTO(&remote_addr_v4, sock, __sk_common.skc_daddr);
-        bpf_printk("recv sock: %lld, remote_addr_v4: %lld", sock, remote_addr_v4);
     }
     return 0;
 }
