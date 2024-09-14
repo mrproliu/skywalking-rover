@@ -31,7 +31,7 @@ cases:
   - query: swctl --display yaml --base-url=http://${service_skywalking_ui_host}:${service_skywalking_ui_80}/graphql endpoint list --service-name=details.default
     expected: expected/service-endpoint-reviews.yml
   # endpoints topology
-  - query: swctl --display yaml --base-url=http://${service_skywalking_ui_host}:${service_skywalking_ui_80}/graphql dependency endpoint --service-name=details.default --endpoint-name=/details/0
+  - query: swctl --display yaml --base-url=http://${service_skywalking_ui_host}:${service_skywalking_ui_80}/graphql dependency endpoint --service-name=details.default --endpoint-name=GET:/details/0
     expected: expected/dependency-endpoint-reviews.yml
 
   # service level metrics
@@ -91,9 +91,9 @@ cases:
     expected: expected/metrics-has-value.yml
 
   # service endpoint level metrics
-  - query: swctl --display yaml --base-url=http://${service_skywalking_ui_host}:${service_skywalking_ui_80}/graphql metrics exec --expression=kubernetes_service_endpoint_call_cpm --service-name=details.default --endpoint-name=/details/0
+  - query: swctl --display yaml --base-url=http://${service_skywalking_ui_host}:${service_skywalking_ui_80}/graphql metrics exec --expression=kubernetes_service_endpoint_call_cpm --service-name=details.default --endpoint-name=GET:/details/0
     expected: expected/metrics-has-value.yml
-  - query: swctl --display yaml --base-url=http://${service_skywalking_ui_host}:${service_skywalking_ui_80}/graphql metrics exec --expression=kubernetes_service_endpoint_http_call_cpm --service-name=details.default --endpoint-name=/details/0
+  - query: swctl --display yaml --base-url=http://${service_skywalking_ui_host}:${service_skywalking_ui_80}/graphql metrics exec --expression=kubernetes_service_endpoint_http_call_cpm --service-name=details.default --endpoint-name=GET:/details/0
     expected: expected/metrics-has-value.yml
 
   # service relation metrics

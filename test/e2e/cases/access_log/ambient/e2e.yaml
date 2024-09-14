@@ -61,6 +61,7 @@ setup:
     - name: Deploy demo services
       command: |
         kubectl apply -f https://raw.githubusercontent.com/istio/istio/1.18.0/samples/bookinfo/platform/kube/bookinfo.yaml
+        kubectl label namespace default istio.io/dataplane-mode=ambient
       wait:
         - namespace: default
           resource: pod
