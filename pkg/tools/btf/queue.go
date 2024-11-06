@@ -88,9 +88,14 @@ func (e *EventQueue) PartitionContexts() []PartitionContext {
 }
 
 func (e *EventQueue) start0(ctx context.Context, linker *Linker) {
+	shouldNotRouter := len(e.partitions) == 1
 	for _, r := range e.receivers {
 		func(receiver *mapReceiver) {
 			linker.ReadEventAsyncWithBufferSize(receiver.emap, func(data interface{}) {
+				if shouldNotRouter {
+					e.partitions[0].ctx.Consume(data)
+					return
+				}
 				e.routerTransformer(data, receiver.router)
 			}, receiver.perCPUBuffer, receiver.dataSupplier)
 		}(r)
