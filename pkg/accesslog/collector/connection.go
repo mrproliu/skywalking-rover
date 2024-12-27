@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/apache/skywalking-rover/pkg/process/api"
 	"net"
 	"os"
 
@@ -33,6 +34,7 @@ import (
 	"github.com/apache/skywalking-rover/pkg/accesslog/forwarder"
 	"github.com/apache/skywalking-rover/pkg/logger"
 	"github.com/apache/skywalking-rover/pkg/module"
+	"github.com/apache/skywalking-rover/pkg/process"
 	"github.com/apache/skywalking-rover/pkg/tools"
 	"github.com/apache/skywalking-rover/pkg/tools/btf"
 	"github.com/apache/skywalking-rover/pkg/tools/enums"
@@ -56,7 +58,7 @@ func NewConnectionCollector() *ConnectCollector {
 	return &ConnectCollector{}
 }
 
-func (c *ConnectCollector) Start(_ *module.Manager, ctx *common.AccessLogContext) error {
+func (c *ConnectCollector) Start(m *module.Manager, ctx *common.AccessLogContext) error {
 	perCPUBufferSize, err := units.RAMInBytes(ctx.Config.ConnectionAnalyze.PerCPUBufferSize)
 	if err != nil {
 		return err
@@ -79,7 +81,7 @@ func (c *ConnectCollector) Start(_ *module.Manager, ctx *common.AccessLogContext
 	}
 	c.eventQueue = btf.NewEventQueue("connection resolver", ctx.Config.ConnectionAnalyze.AnalyzeParallels,
 		ctx.Config.ConnectionAnalyze.QueueSize, func(num int) btf.PartitionContext {
-			return newConnectionPartitionContext(ctx, track)
+			return newConnectionPartitionContext(ctx, track, m.FindModule(process.ModuleName).(process.K8sOperator))
 		})
 	c.eventQueue.RegisterReceiver(ctx.BPF.SocketConnectionEventQueue, int(perCPUBufferSize),
 		ctx.Config.ConnectionAnalyze.ParseParallels, func() interface{} {
@@ -131,12 +133,15 @@ func (c *ConnectCollector) Stop() {
 type ConnectionPartitionContext struct {
 	context     *common.AccessLogContext
 	connTracker *ip.ConnTrack
+	k8sOperator process.K8sOperator
 }
 
-func newConnectionPartitionContext(ctx *common.AccessLogContext, connTracker *ip.ConnTrack) *ConnectionPartitionContext {
+func newConnectionPartitionContext(ctx *common.AccessLogContext, connTracker *ip.ConnTrack,
+	k8sOperator process.K8sOperator) *ConnectionPartitionContext {
 	return &ConnectionPartitionContext{
 		context:     ctx,
 		connTracker: connTracker,
+		k8sOperator: k8sOperator,
 	}
 }
 
@@ -294,8 +299,24 @@ func (c *ConnectionPartitionContext) buildSocketPair(event *events.SocketConnect
 }
 
 func (c *ConnectionPartitionContext) tryToUpdateSocketFromConntrack(event *events.SocketConnectEvent, socket *ip.SocketPair) {
-	if socket != nil && socket.IsValid() && c.connTracker != nil && !tools.IsLocalHostAddress(socket.DestIP) &&
-		event.FuncName != enums.SocketFunctionNameAccept { // accept event don't need to update the remote address
+	if socket == nil || !socket.IsValid() || tools.IsLocalHostAddress(socket.DestIP) &&
+		event.FuncName == enums.SocketFunctionNameAccept { // accept event don't need to update the remote address
+		return
+	}
+	if c.context.ConnectionMgr.ProcessIsDetectBy(event.PID, api.Kubernetes) {
+		isPodIP, err := c.k8sOperator.IsPodIP(socket.DestIP)
+		log.Infof("ip: %s, isPodIP: %v, err: %v", socket.DestIP, isPodIP, err)
+		if err != nil {
+			connectionLogger.Warnf("cannot found the pod IP, connection ID: %d, randomID: %d, error: %v",
+				event.ConID, event.RandomID, err)
+		}
+		if isPodIP {
+			connectionLogger.Debugf("detect the remote IP is pod IP, connection ID: %d, randomID: %d, remote: %s",
+				event.ConID, event.RandomID, socket.DestIP)
+			return
+		}
+	}
+	if c.connTracker != nil {
 		// if no contract and socket data is valid, then trying to get the remote address from the socket
 		// to encase the remote address is not the real remote address
 		originalIP := socket.DestIP

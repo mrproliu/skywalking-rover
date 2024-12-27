@@ -746,6 +746,17 @@ func (c *ConnectionManager) SkipAllDataAnalyze(conID, ranID uint64) {
 	}
 }
 
+func (c *ConnectionManager) ProcessIsDetectBy(pid uint32, detectType api.ProcessDetectType) bool {
+	c.monitoringProcessLock.RLock()
+	defer c.monitoringProcessLock.RUnlock()
+	for _, p := range c.monitoringProcesses[int32(pid)] {
+		if p.DetectType() == detectType {
+			return true
+		}
+	}
+	return false
+}
+
 func getSocketPairFromConnectEvent(event events.Event) (*events.SocketConnectEvent, *ip.SocketPair) {
 	if e, ok := event.(*ConnectEventWithSocket); ok {
 		return e.SocketConnectEvent, e.SocketPair

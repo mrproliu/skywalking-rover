@@ -35,6 +35,8 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/util/cache"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -53,6 +55,7 @@ var log = logger.GetLogger("process", "finder", "kubernetes")
 var (
 	kubepodsRegex      = regexp.MustCompile(`cri-containerd-(?P<Group>\w+)\.scope`)
 	openShiftPodsRegex = regexp.MustCompile(`crio-(?P<Group>\w+)\.scope`)
+	ipExistTimeout     = time.Minute
 )
 
 type ProcessFinder struct {
@@ -73,6 +76,9 @@ type ProcessFinder struct {
 
 	// runtime config
 	namespaces []string
+
+	// for IsPodIP check
+	podIPChecker *cache.Expiring
 }
 
 func (f *ProcessFinder) Init(ctx context.Context, conf base.FinderBaseConfig, manager base.ProcessManager) error {
@@ -89,11 +95,12 @@ func (f *ProcessFinder) Init(ctx context.Context, conf base.FinderBaseConfig, ma
 	f.stopChan = make(chan struct{}, 1)
 	f.registry = NewRegistry(f.CLI, f.namespaces, f.conf.NodeName)
 	f.manager = manager
-	cache, err := lru.New(5000)
+	f.podIPChecker = cache.NewExpiring()
+	processCache, err := lru.New(5000)
 	if err != nil {
 		return err
 	}
-	f.processCache = cache
+	f.processCache = processCache
 
 	return nil
 }
@@ -399,4 +406,26 @@ func (f *ProcessFinder) ShouldMonitor(pid int32) bool {
 	}
 	f.manager.AddDetectedProcess(processes)
 	return true
+}
+
+func (f *ProcessFinder) IsPodIP(ip string) (bool, error) {
+	val, exist := f.podIPChecker.Get(ip)
+	if exist {
+		return val.(bool), nil
+	}
+	pods, err := f.CLI.CoreV1().Pods(v1.NamespaceAll).List(f.ctx, metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("status.podIP", ip).String(),
+	})
+	if err != nil {
+		return false, err
+	}
+	found := false
+	for _, pod := range pods.Items {
+		if pod.Status.PodIP == ip {
+			found = true
+		}
+	}
+
+	f.podIPChecker.Set(ip, found, ipExistTimeout)
+	return found, nil
 }
