@@ -343,6 +343,17 @@ func (c *ConnectionManager) ProcessIsMonitor(pid uint32) bool {
 	return len(c.monitoringProcesses[int32(pid)]) > 0
 }
 
+func (c *ConnectionManager) ProcessIsDetectBy(pid uint32, detectType api.ProcessDetectType) bool {
+	c.monitoringProcessLock.RLock()
+	defer c.monitoringProcessLock.RUnlock()
+	for _, p := range c.monitoringProcesses[int32(pid)] {
+		if p.DetectType() == detectType {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *ConnectionManager) buildConnection(event *events.SocketConnectEvent, socket *ip.SocketPair,
 	local, remote *v3.ConnectionAddress) *ConnectionInfo {
 	var role v32.DetectPoint
