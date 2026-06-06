@@ -15,21 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-
-.PHONY: generate
-generate: export BPF_CLANG := $(CONTAINER_COMMAND_CLANG)
-generate: export BPF_CFLAGS := $(CONTAINER_COMMAND_CFLAGS)
-generate: export REPO_ROOT := $(REPODIR)
-generate: proto-gen
-	cd ./ && TARGET=$(if $(findstring x86_64,$(shell uname -m)),amd64,arm64) go generate ./...
-
-# Usually works for generate ebpf ELF file on Mac OS or windows
-.PHONY: container-generate
-container-generate: COMMAND=generate
-container-generate: container-command
-
-.PHONY: proto-gen
-proto-gen:
-	$(GO) install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6
-	$(GO) install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
-	PATH="$(GO_PATH)/bin:$$PATH" $(GO) run github.com/bufbuild/buf/cmd/buf@v1.50.0 generate proto
+version: v2
+plugins:
+  - local: protoc-gen-go
+    out: proto
+    opt: paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: proto
+    opt: paths=source_relative

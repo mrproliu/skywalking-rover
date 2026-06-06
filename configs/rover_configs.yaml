@@ -159,6 +159,14 @@ access_log:
     # The size of per paralleled analyzer queue
     queue_size: ${ROVER_ACCESS_LOG_PROTOCOL_ANALYZE_QUEUE_SIZE:5000}
 
+diagnosis:
+  # Is active the diagnosis gRPC server for the rover-cli
+  active: ${ROVER_DIAGNOSIS_ACTIVE:true}
+  # The bind host of the diagnosis gRPC server
+  host: ${ROVER_DIAGNOSIS_HOST:127.0.0.1}
+  # The bind port of the diagnosis gRPC server
+  port: ${ROVER_DIAGNOSIS_PORT:12700}
+
 pprof:
   # Is active the pprof
   active: ${ROVER_PPROF_ACTIVE:false}

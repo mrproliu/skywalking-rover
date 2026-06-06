@@ -24,7 +24,8 @@ WORKDIR /src
 COPY . .
 
 RUN VERSION=$VERSION make btfgen && make linux
-RUN mv /src/bin/skywalking-rover-${VERSION}-linux-* /src/bin/skywalking-rover
+RUN mv /src/bin/skywalking-rover-${VERSION}-linux-* /src/bin/skywalking-rover && \
+    mv /src/bin/rover-cli-${VERSION}-linux-* /src/bin/rover-cli
 
 FROM alpine
 
@@ -33,6 +34,7 @@ VOLUME /skywalking/configs
 WORKDIR /skywalking
 
 COPY --from=build /src/bin/skywalking-rover /
+COPY --from=build /src/bin/rover-cli /
 COPY --from=build /src/configs /skywalking/configs
 
 CMD ["/skywalking-rover", "start", "--config", "/skywalking/configs/rover_configs.yaml"]

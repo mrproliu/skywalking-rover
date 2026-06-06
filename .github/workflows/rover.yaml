@@ -147,6 +147,12 @@ jobs:
           - name: Access Log
             base: test/e2e/cases/access_log
             config: e2e.yaml
+          - name: Diagnosis
+            base: test/e2e/cases/diagnosis
+            config: e2e.yaml
+            env: |
+              ISTIO_VERSION=1.29.0
+              KUBERNETES_VERSION=28
     steps:
       - uses: actions/checkout@v3
         with:

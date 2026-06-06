@@ -1,0 +1,86 @@
+// Licensed to Apache Software Foundation (ASF) under one or more contributor
+// license agreements. See the NOTICE file distributed with
+// this work for additional information regarding copyright
+// ownership. Apache Software Foundation (ASF) licenses this file to you under
+// the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+syntax = "proto3";
+
+package skywalking.rover.diagnosis.v1;
+
+option go_package = "github.com/apache/skywalking-rover/proto/diagnosis";
+
+service DiagnosisService {
+  // ListProcesses query the processes discovered by the process_discovery module,
+  // the processes are visible even if they have not been reported to the backend
+  rpc ListProcesses(ListProcessesRequest) returns (ListProcessesResponse) {}
+  // TraceConnect trace the TCP connect operations of the matched processes in real-time,
+  // the tracing task would be stopped when the RPC stream is closed
+  rpc TraceConnect(TraceConnectRequest) returns (stream ConnectEvent) {}
+}
+
+// ProcessSelector is the generic process filter shared by all diagnosis tasks,
+// the name conditions are substring matching, all non-empty conditions and pids
+// are combined with AND
+message ProcessSelector {
+  string service_name = 1;
+  string instance_name = 2;
+  string process_name = 3;
+  repeated int32 pids = 4;
+}
+
+message ListProcessesRequest {
+  ProcessSelector selector = 1;
+}
+
+message ListProcessesResponse {
+  repeated ProcessInfo processes = 1;
+}
+
+message ProcessInfo {
+  int32 pid = 1;
+  // the entity id assigned by the backend, empty if not reported yet
+  string entity_id = 2;
+  string layer = 3;
+  string service_name = 4;
+  string instance_name = 5;
+  string process_name = 6;
+  repeated string labels = 7;
+  string exe_path = 8;
+  string command_line = 9;
+  // whether the process has been reported to the OAP backend successfully
+  bool reported_to_backend = 10;
+}
+
+message TraceConnectRequest {
+  ProcessSelector selector = 1;
+}
+
+message ConnectEvent {
+  // the real wall-clock time converted from the BPF ktime
+  int64 timestamp_ns = 1;
+  int32 pid = 2;
+  string process_name = 3;
+  // format: "ip:port" for IPv4, "[ip]:port" for IPv6
+  string remote_address = 4;
+  bool success = 5;
+  // the errno when connect failure
+  int32 errno = 6;
+  // the duration of the connect syscall
+  int64 latency_ns = 7;
+  // the human-readable message of the errno, resolved on the daemon side
+  // since the errno table is OS/architecture dependent,
+  // e.g. "ECONNREFUSED: connection refused", empty when connect success
+  string error_message = 8;
+}

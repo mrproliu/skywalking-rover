@@ -15,3 +15,6 @@ pkg/**/bpf_*.go
 pkg/tools/btf/files/**/*.btf
 
 .config
+
+proto/**/*.pb.go
+.omc/

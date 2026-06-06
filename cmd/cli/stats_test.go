@@ -15,26 +15,28 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package boot
+package main
 
-import (
-	"github.com/apache/skywalking-rover/pkg/accesslog"
-	"github.com/apache/skywalking-rover/pkg/core"
-	"github.com/apache/skywalking-rover/pkg/diagnosis"
-	"github.com/apache/skywalking-rover/pkg/logger"
-	"github.com/apache/skywalking-rover/pkg/module"
-	"github.com/apache/skywalking-rover/pkg/pprof"
-	"github.com/apache/skywalking-rover/pkg/process"
-	"github.com/apache/skywalking-rover/pkg/profiling"
-)
+import "testing"
 
-func init() {
-	// register all active module
-	module.Register(logger.NewModule())
-	module.Register(core.NewModule())
-	module.Register(process.NewModule())
-	module.Register(profiling.NewModule())
-	module.Register(accesslog.NewModule())
-	module.Register(diagnosis.NewModule())
-	module.Register(pprof.NewModule())
+func TestStatsCollector(t *testing.T) {
+	collector := newStatsCollector()
+	collector.Add("10.96.0.10:9090", true)
+	collector.Add("10.96.0.10:9090", true)
+	collector.Add("10.96.0.11:443", false)
+
+	rows := collector.Rows()
+	if len(rows) != 2 {
+		t.Fatalf("want 2 rows, got %d", len(rows))
+	}
+	first := rows[0]
+	if first.Remote != "10.96.0.10:9090" || first.Total != 2 || first.Success != 2 ||
+		first.Failed != 0 || first.FailPercent != 0 {
+		t.Fatalf("unexpected first row: %+v", first)
+	}
+	second := rows[1]
+	if second.Remote != "10.96.0.11:443" || second.Total != 1 || second.Failed != 1 ||
+		second.FailPercent != 100 {
+		t.Fatalf("unexpected second row: %+v", second)
+	}
 }

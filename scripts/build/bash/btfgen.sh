@@ -46,7 +46,8 @@ each_all_bpf_so_file() {
     done
 }
 
-${TMPDIR}/btfhub/tools/btfgen.sh -a ${ARCH} $(each_all_bpf_so_file $FROM)
+# -j: generate BTF files in parallel, the btfhub tool caps it at the CPU count automatically
+"${TMPDIR}"/btfhub/tools/btfgen.sh -a "${ARCH}" -j "$(nproc 2>/dev/null || echo 1)" $(each_all_bpf_so_file "$FROM")
 mkdir -p ${OUTPUT}
 cp -r ${TMPDIR}/btfhub/custom-archive/* ${OUTPUT}
 

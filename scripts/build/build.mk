@@ -17,6 +17,7 @@
 #
 
 BINARY = skywalking-rover
+CLI_BINARY = rover-cli
 
 OUT_DIR = bin
 GO_BUILD_FLAGS = -buildvcs=false -v
@@ -30,13 +31,16 @@ else
 endif
 os = $(word 1, $@)
 
-deps:
+# deps requires proto-gen first: the generated proto code is not committed,
+# go get would fail to resolve the proto package before the generation
+deps: proto-gen
 	$(GO_GET) -v -t -d ./...
 
 .PHONY: $(PLATFORMS)
 $(PLATFORMS): deps
 	mkdir -p $(OUT_DIR)
-	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(ARCH) $(GO_BUILD) $(GO_BUILD_FLAGS) -ldflags "$(GO_BUILD_LDFLAGS)" -o $(OUT_DIR)/$(BINARY)-$(VERSION)-$(os)-$(ARCH) ./cmd
+	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(ARCH) $(GO_BUILD) $(GO_BUILD_FLAGS) -ldflags "$(GO_BUILD_LDFLAGS)" -o $(OUT_DIR)/$(BINARY)-$(VERSION)-$(os)-$(ARCH) ./cmd/roverd
+	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(ARCH) $(GO_BUILD) $(GO_BUILD_FLAGS) -ldflags "$(GO_BUILD_LDFLAGS)" -o $(OUT_DIR)/$(CLI_BINARY)-$(VERSION)-$(os)-$(ARCH) ./cmd/cli
 
 .PHONY: build
 build: linux
