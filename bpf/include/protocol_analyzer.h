@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "api.h"
+
 #define CONNECTION_PROTOCOL_UNKNOWN 0
 #define CONNECTION_PROTOCOL_HTTP1 1
 #define CONNECTION_PROTOCOL_HTTP2 2
@@ -178,7 +180,7 @@ static __inline __u32 infer_http2_message(const char* buf, size_t count) {
 	return CONNECTION_MESSAGE_TYPE_UNKNOWN;
 }
 
-static __inline __u32 analyze_protocol(char *buf, __u32 count, __u8 *protocol_ref) {
+static __noinline __u32 analyze_protocol(char *buf, __u32 count, __u8 *protocol_ref) {
     __u32 protocol = CONNECTION_PROTOCOL_UNKNOWN, type = CONNECTION_MESSAGE_TYPE_UNKNOWN;
 
     // support http 1.x and 2.x
