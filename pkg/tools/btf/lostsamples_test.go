@@ -15,19 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package pprof
+package btf
 
-import "github.com/apache/skywalking-rover/pkg/module"
+import "testing"
 
-type Config struct {
-	module.Config `mapstructure:",squash"`
+func TestLostSampleCounterDrain(t *testing.T) {
+	c := &lostSampleCounter{counts: make(map[string]uint64)}
+	c.counts["q1"] += 3
+	c.counts["q1"] += 2
+	c.counts["q2"] += 7
 
-	// Host is the bind address of the pprof HTTP server. It defaults to 127.0.0.1 so the debug
-	// endpoints are only reachable from the local host and are not exposed on the network.
-	Host string `mapstructure:"host"`
-	Port int    `mapstructure:"port"`
-}
+	drained := c.drain()
+	if drained["q1"] != 5 || drained["q2"] != 7 {
+		t.Fatalf("unexpected drained counts: %v", drained)
+	}
 
-func (c *Config) IsActive() bool {
-	return c.Active
+	// after a drain the counter must be reset, so a subsequent drain with no new samples is empty
+	if again := c.drain(); again != nil {
+		t.Fatalf("expected nil after reset, got: %v", again)
+	}
 }

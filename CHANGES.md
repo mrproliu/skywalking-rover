@@ -27,10 +27,16 @@ Release Notes.
 * Support detect ztunnel environment in the inbound request.
 * Increase the transmit buffer size in the network profiling and access log module.
 * Reduce eBPF verifier complexity by converting hot inline helpers to BPF-to-BPF calls, fixing the "program too large" failure when loading access log programs on newer kernels.
+* Reduce memory by not retaining ELF symbols for processes that are not being profiled.
+* Increase the default access log protocol per-CPU buffer to 1MB to reduce dropped samples.
+* Aggregate dropped perf event sample warnings periodically instead of logging every burst.
+* Lower the log level for connection query errors of short-lived exited processes.
+* Enable pprof by default but bind it to 127.0.0.1 so it is not exposed on the network.
 
 #### Bug Fixes
 * Fix the base image cannot run in the arm64.
 * Fix process fork tracepoint reporting thread TID instead of process TGID, causing repeated process detected/dead churn.
+* Fix panic in the access log module when handling HTTP/2 streams without a body.
 
 #### Documentation
 * Add a dead link checker in the CI.
